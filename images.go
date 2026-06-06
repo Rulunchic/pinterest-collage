@@ -2,13 +2,17 @@ package main
 
 import (
 	"image"
+	"image/draw"
 	_ "image/gif"
 	_ "image/jpeg"
 	_ "image/png"
 	"log/slog"
+	"math"
 	"os"
 	"path/filepath"
 	"strings"
+
+	xdraw "golang.org/x/image/draw"
 )
 
 // loadImages decodes every JPEG/PNG/GIF file in dir (non-recursive).
@@ -50,10 +54,30 @@ func loadImages(dir string, logger *slog.Logger) []image.Image {
 			skipped = append(skipped, e.Name()+": decode")
 			continue
 		}
-		imgs = append(imgs, img)
+		imgs = append(imgs, preResize(img))
 	}
 	if len(skipped) > 0 {
 		logger.Warn("skipped files", "files", strings.Join(skipped, ", "))
 	}
 	return imgs
+}
+
+// maxPreloadDim is the max width or height of a pre-resized source image.
+// Smaller sources mean faster per-frame scaling.
+const maxPreloadDim = 1200
+
+// preResize scales img down so neither dimension exceeds maxPreloadDim.
+// Images already within bounds are returned as-is.
+func preResize(img image.Image) image.Image {
+	b := img.Bounds()
+	w, h := b.Dx(), b.Dy()
+	if w <= maxPreloadDim && h <= maxPreloadDim {
+		return img
+	}
+	scale := math.Min(float64(maxPreloadDim)/float64(w), float64(maxPreloadDim)/float64(h))
+	nw := int(math.Round(float64(w) * scale))
+	nh := int(math.Round(float64(h) * scale))
+	dst := image.NewRGBA(image.Rect(0, 0, nw, nh))
+	xdraw.BiLinear.Scale(dst, dst.Bounds(), img, b, draw.Over, nil)
+	return dst
 }

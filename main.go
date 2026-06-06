@@ -160,14 +160,14 @@ func main() {
 	}
 
 	if *out == "" {
-		*out = filepath.Join(os.TempDir(), "pinterest-collage-wallpaper.png")
+		*out = filepath.Join(os.TempDir(), "pinterest-collage-wallpaper.jpg")
 	}
 
 	run := func() {
 		count := *minTiles + rand.Intn(*maxTiles-*minTiles+1)
 		tiles := generate(w, h, count, images, bg, *marginTop, *marginBottom, *marginLeft, *marginRight, *gap)
 		img := render(tiles, w, h, bg)
-		if err := savePNG(img, *out); err != nil {
+		if err := saveJPEG(img, *out); err != nil {
 			logger.Error("save failed", "err", err, "path", *out)
 			os.Exit(1)
 		}

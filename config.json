@@ -1,12 +1,12 @@
 {
-    "min_tiles": 12,
-    "max_tiles": 15,
-    "interval_seconds": 5,
-    "margin_top": 40,
-    "margin_bottom": 10,
-    "margin_left": 10,
-    "margin_right": 10,
-    "gap": 12,
-    "images_dir": "images",
-    "background_color": "#f0edec"
+  "min_tiles": 8,
+  "max_tiles": 11,
+  "interval_seconds": 5,
+  "margin_top": 40,
+  "margin_bottom": 10,
+  "margin_left": 10,
+  "margin_right": 10,
+  "gap": 12,
+  "images_dir": "images",
+  "background_color": "#5c5c5c"
 }

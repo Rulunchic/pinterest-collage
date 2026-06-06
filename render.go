@@ -4,9 +4,10 @@ import (
 	"image"
 	"image/color"
 	"image/draw"
-	"image/png"
+	"image/jpeg"
 	"math"
 	"os"
+	"sync"
 
 	xdraw "golang.org/x/image/draw"
 )
@@ -30,12 +31,7 @@ func render(tiles []Tile, width, height int, bg color.RGBA) *image.RGBA {
 	return img
 }
 
-// scaleFit scales src to exactly w×h, preserving the original aspect
-// ratio. The caller (generate) already size-matched the cell to the
-// photo's aspect, so this lands at the cell's full size with no
-// rounding artifacts. If the cell aspect does differ from the photo
-// aspect, the photo is fit (contain) — the empty space inside the
-// cell stays as the canvas background color.
+// scaleFit scales src to exactly w×h using BiLinear (fast, good quality).
 func scaleFit(src image.Image, w, h int) *image.RGBA {
 	sb := src.Bounds()
 	sw, sh := sb.Dx(), sb.Dy()
@@ -54,7 +50,7 @@ func scaleFit(src image.Image, w, h int) *image.RGBA {
 	}
 
 	dst := image.NewRGBA(image.Rect(0, 0, newW, newH))
-	xdraw.CatmullRom.Scale(dst, dst.Bounds(), src, sb, draw.Over, nil)
+	xdraw.BiLinear.Scale(dst, dst.Bounds(), src, sb, draw.Over, nil)
 	return dst
 }
 
@@ -76,11 +72,15 @@ func cornerRadius(w, h int) int {
 	return r
 }
 
-// roundedMask returns an alpha mask that is fully opaque inside a
-// rounded rectangle of radius r and fully transparent outside the
-// corner quarter-circles. A short linear ramp across one pixel
-// anti-aliases the edge.
+// maskCache avoids recomputing identical masks every frame.
+var maskCache sync.Map // key: [2]int{w,h} → *image.Alpha
+
+// roundedMask returns a cached alpha mask for the given tile size.
 func roundedMask(w, h, r int) *image.Alpha {
+	key := [2]int{w, h}
+	if v, ok := maskCache.Load(key); ok {
+		return v.(*image.Alpha)
+	}
 	m := image.NewAlpha(image.Rect(0, 0, w, h))
 	for y := 0; y < h; y++ {
 		for x := 0; x < w; x++ {
@@ -109,15 +109,16 @@ func roundedMask(w, h, r int) *image.Alpha {
 			m.SetAlpha(x, y, color.Alpha{A: a})
 		}
 	}
+	maskCache.Store(key, m)
 	return m
 }
 
-func savePNG(img *image.RGBA, path string) error {
+func saveJPEG(img *image.RGBA, path string) error {
 	f, err := os.Create(path)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
-	return png.Encode(f, img)
+	return jpeg.Encode(f, img, &jpeg.Options{Quality: 95})
 }
 
