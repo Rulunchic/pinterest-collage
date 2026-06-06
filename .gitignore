@@ -1,0 +1,11 @@
+# build artifacts
+*.exe
+*.exe~
+
+# Go workspace
+go.work
+go.work.sum
+
+# user photos (not committed; folder is preserved via .gitkeep)
+images/*
+!images/.gitkeep
